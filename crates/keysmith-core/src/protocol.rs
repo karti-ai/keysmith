@@ -641,7 +641,7 @@ impl<T: Transport> Inspector<T> {
             let count = (capacity - start).min(9);
             let response = self.get(&[0xa7, 0x08, start, count])?;
             self.expect_command(0xa7, &response)?;
-            for pair in response[3..3 + count as usize * 3].chunks_exact(3) {
+            for pair in response[3..3 + count as usize * 3].as_chunks::<3>().0 {
                 configured += u8::from(pair[0] != 0);
             }
             start += count;
