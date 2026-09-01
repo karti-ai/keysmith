@@ -11,7 +11,6 @@ import {
   Cpu,
   FileJson,
   GitFork,
-  HardDriveDownload,
   Info,
   Lightbulb,
   LockKeyhole,
@@ -45,10 +44,10 @@ interface MetricProps {
   detail?: string;
 }
 
-const FACTORY_HASH = "210a4f41…de15a9a";
-const SNAPSHOT_HASH = "5a6eb3fe…c9614d";
 const V02_HASH = "19c88b034495ed9281ef06158bb6395f5165bc304922de4eb3884827136eb196";
 const V03_HASH = "836c74cbaa72119d228368f8b3b37dbe94438d79d121db1ff0789da48f408277";
+const PUBLIC_V03_COMMIT = "bbbd4fac3c";
+const REFERENCE_V03_COMMIT = "2b422a5a12";
 
 function Metric({ label, value, detail }: MetricProps) {
   return (
@@ -227,11 +226,11 @@ function MacrosPage({ inspection, onPreview }: Omit<Props, "page">) {
 }
 
 const CONNECTIONS = [
-  { id: "bt1", Icon: Bluetooth, name: "Bluetooth host 1", state: "Pairing state unavailable", kind: "Bluetooth" },
-  { id: "bt2", Icon: Bluetooth, name: "Bluetooth host 2", state: "Pairing state unavailable", kind: "Bluetooth" },
-  { id: "bt3", Icon: Bluetooth, name: "Bluetooth host 3", state: "Pairing state unavailable", kind: "Bluetooth" },
-  { id: "rf", Icon: Radio, name: "2.4 GHz receiver", state: "Supported · receiver unavailable", kind: "2.4 GHz" },
-  { id: "usb", Icon: Usb, name: "USB cable", state: "Connected", kind: "USB" },
+  { id: "bt1", Icon: Bluetooth, name: "Bluetooth host 1", state: "Host state not exposed", kind: "Bluetooth" },
+  { id: "bt2", Icon: Bluetooth, name: "Bluetooth host 2", state: "Host state not exposed", kind: "Bluetooth" },
+  { id: "bt3", Icon: Bluetooth, name: "Bluetooth host 3", state: "Host state not exposed", kind: "Bluetooth" },
+  { id: "rf", Icon: Radio, name: "2.4 GHz receiver", state: "Receiver state not exposed", kind: "2.4 GHz" },
+  { id: "usb", Icon: Usb, name: "USB cable", state: "Inspection path", kind: "USB" },
 ] as const;
 
 function WirelessPage({ inspection, onPreview }: Omit<Props, "page">) {
@@ -257,12 +256,12 @@ function WirelessPage({ inspection, onPreview }: Omit<Props, "page">) {
       <PageHeading title="Wireless" description="Inspect transport support, follow physical pairing steps, and stage timeout changes without sending them." />
       <div className="wireless-layout">
         <Panel title="Connection modes" icon={<Wifi size={16} />} className="wireless-list">
-          {CONNECTIONS.map(({ id, Icon, name, state, kind }) => <button className={selectedMode === id ? "wireless-row selected" : "wireless-row"} key={id} onClick={() => setSelectedMode(id)}><span className="connection-icon"><Icon size={16} /></span><span><strong>{name}</strong><small>{kind}</small></span><span className={state === "Connected" ? "connection-state connected-state" : "connection-state"}>{state === "Connected" ? <Check size={13} /> : null}{state}</span><ChevronDown size={14} /></button>)}
+          {CONNECTIONS.map(({ id, Icon, name, state, kind }) => <button className={selectedMode === id ? "wireless-row selected" : "wireless-row"} key={id} onClick={() => setSelectedMode(id)}><span className="connection-icon"><Icon size={16} /></span><span><strong>{name}</strong><small>{kind}</small></span><span className={id === "usb" ? "connection-state connected-state" : "connection-state"}>{id === "usb" ? <Check size={13} /> : null}{state}</span><ChevronDown size={14} /></button>)}
         </Panel>
         <div className="wireless-side">
           <Panel title="Pairing guide" icon={<Bluetooth size={16} />} className="pairing-guide">
             <strong>{selected.name}</strong>
-            {selected.kind === "Bluetooth" ? <ol><li>Move the hardware switch to Bluetooth.</li><li>Hold the matching host shortcut for more than 2 seconds.</li><li>Finish pairing from the host operating system.</li></ol> : selected.kind === "USB" ? <p>USB is the active inspection path. Keysmith configuration remains USB-only.</p> : <p>The board supports 2.4 GHz, but the receiver is currently unavailable. Replacement receiver compatibility must be verified first.</p>}
+            {selected.kind === "Bluetooth" ? <ol><li>Move the hardware switch to Bluetooth.</li><li>Hold the matching host shortcut for more than 2 seconds.</li><li>Finish pairing from the host operating system.</li></ol> : selected.kind === "USB" ? <p>USB is the active inspection path. Keysmith configuration remains USB-only.</p> : <p>Keysmith does not detect or provision receiver state. Verify exact receiver compatibility and follow official Keychron pairing instructions.</p>}
             <p className="inline-note"><Info size={14} />Current source does not expose arbitrary Keysmith Raw HID configuration over Bluetooth.</p>
           </Panel>
           <Panel title="Quick facts" icon={<Cable size={16} />} className="quick-facts"><Metric label="Bluetooth hosts" value="3" /><Metric label="Configuration path" value="USB only" /><Metric label="Host state" value="Not exposed" /></Panel>
@@ -309,41 +308,45 @@ function AgentPage({ onPreview }: Pick<Props, "onPreview">) {
 
 function FirmwarePage({ inspection, onPreview, firmwareProbe }: Omit<Props, "page">) {
   const firmwareParts = inspection.identity.firmware.split(" ");
-  const version = firmwareParts[0];
-  const built = firmwareParts.slice(1).join(" ") || "2025-04-23 11:57";
+  const version = firmwareParts[0] || "Not reported";
+  const built = firmwareParts.slice(1).join(" ") || "Not reported";
   const installed = firmwareProbe.probe?.installed === true;
   const protocol = firmwareProbe.probe?.protocol;
   const v03Installed = Boolean(installed && protocol && (protocol.major > 0 || protocol.minor >= 3));
   const gateState = protocol?.write_status?.state ?? "unknown";
-  const installedState = v03Installed ? `Installed · protocol 0.3 · gate ${gateState}` : "Archived · previous build";
-  const evidencePreview = v03Installed
-    ? `Keysmith v0.3 image 836c74cb…408277 is installed from source 2b422a5a12. Its live physical write gate is ${gateState}; the browser and server expose no apply route.`
-    : "Keysmith v0.3 is not detected. Firmware flashing remains attended-terminal-only.";
+  const protocolLabel = protocol ? `${protocol.major}.${protocol.minor}` : "version unavailable";
+  const installedState = v03Installed
+    ? `Detected live · protocol ${protocolLabel} · gate ${gateState}`
+    : installed
+      ? `Detected live · protocol ${protocolLabel}`
+      : "Not detected on this device";
+  const installedSource = protocol?.build?.qmk_git_hash ?? "Not reported";
+  const evidencePreview = `Reference lab only: image 836c74cb…408277 from source ${REFERENCE_V03_COMMIT} was validated on one Q3 Max ANSI encoder. It is not the current public candidate or evidence about this device.`;
   return (
     <>
-      <PageHeading title="Firmware" description="Keep recovery evidence visible. A custom image cannot be flashed from the web application." />
+      <PageHeading title="Firmware" description="Review live identity, public candidate status, and operator recovery requirements. A custom image cannot be flashed from the web application." />
       <div className="firmware-layout">
         <div className="firmware-grid">
           <Panel title="Current firmware" icon={<Cpu size={16} />} className="firmware-card"><Metric label="Version" value={version} /><Metric label="Build" value={built} /><Metric label="MCU" value="STM32F401" /><Metric label="Bootloader" value="stm32-dfu" /></Panel>
-          <Panel title="Factory image" icon={<HardDriveDownload size={16} />} className="firmware-card"><p className="safe-line"><CheckCircle2 size={16} />Official ANSI image archived</p><code>{FACTORY_HASH}</code><small>Recovery source for the original factory v1.1.1 firmware.</small></Panel>
-          <Panel title="Configuration snapshot" icon={<FileJson size={16} />} className="firmware-card"><p className="safe-line"><CheckCircle2 size={16} />Pre-flash inspection saved</p><code>{SNAPSHOT_HASH}</code><small>Layers, macros, RGB, wireless policy, debounce, and encoder bindings.</small></Panel>
-          <Panel title="Installed custom image" icon={<ShieldCheck size={16} />} className="firmware-card candidate-card"><p className="candidate-state"><CheckCircle2 size={15} />{installedState}</p><Metric label="Source commit" value="2b422a5a12" /><code>{V03_HASH}</code><small>One plan-bound operation per physical chord, with visible Esc status. Legacy write bypasses are denied.</small><PreviewButton secondary onPreview={() => onPreview(evidencePreview)}>Review v0.3 boundary</PreviewButton></Panel>
-          <Panel title="Previous v0.2 image" icon={<GitFork size={16} />} className="firmware-card"><p className="candidate-state"><Archive size={15} />Archived · rollback available</p><Metric label="Source commit" value="e9972e1a43" /><code>{V02_HASH}</code><small>The earlier read-only protocol 0.2 image remains preserved with its exact source and checksum.</small><PreviewButton secondary onPreview={() => onPreview("Keysmith v0.2 image 19c88b03…eb196 remains archived as the previous read-only build.")}>Review v0.2 evidence</PreviewButton></Panel>
+          <Panel title="Live Keysmith extension" icon={<ShieldCheck size={16} />} className="firmware-card candidate-card"><p className="candidate-state">{v03Installed ? <CheckCircle2 size={15} /> : <CircleOff size={15} />}{installedState}</p><Metric label="Reported source" value={installedSource} /><small>This card is derived from the connected USB probe. Detection does not prove that private recovery material exists.</small></Panel>
+          <Panel title="Current public candidate" icon={<GitFork size={16} />} className="firmware-card"><p className="candidate-state"><CheckCircle2 size={15} />CI build validated · no binary release</p><Metric label="Source commit" value={PUBLIC_V03_COMMIT} /><small>Firmware 0.3.0-candidate, protocol 0.3. This exact public source has not been validated as a flashed release image.</small></Panel>
+          <Panel title="Reference lab validation" icon={<Archive size={16} />} className="firmware-card"><p className="candidate-state"><Info size={15} />One reference Q3 Max ANSI encoder</p><Metric label="Installed source" value={REFERENCE_V03_COMMIT} /><code>{V03_HASH}</code><small>This historical lab image is not a public release and does not describe the connected device.</small><PreviewButton secondary onPreview={() => onPreview(evidencePreview)}>Review lab evidence</PreviewButton></Panel>
+          <Panel title="Historical v0.2 lab build" icon={<FileJson size={16} />} className="firmware-card"><p className="candidate-state"><Archive size={15} />Reference evidence only</p><Metric label="Source commit" value="e9972e1a43" /><code>{V02_HASH}</code><small>This checksum identifies a privately preserved lab build; it is not a promised rollback for other users.</small><PreviewButton secondary onPreview={() => onPreview("Reference lab only: v0.2 image 19c88b03…eb196 identifies an earlier read-only build. Availability and recovery readiness are operator-specific.")}>Review v0.2 lab evidence</PreviewButton></Panel>
         </div>
         <FirmwareProbeCard probe={firmwareProbe.probe} error={firmwareProbe.error} loading={firmwareProbe.loading} onRefresh={firmwareProbe.refresh} />
-        <Panel title="Recovery checklist" icon={<ShieldCheck size={16} />} className="recovery-panel">
-          <ol><li className="done"><Check size={13} /><span><strong>Factory image archived</strong><small>Checksum recorded twice</small></span></li><li className="done"><Check size={13} /><span><strong>Configuration saved</strong><small>Pre- and post-flash JSON snapshots</small></span></li><li className="done"><Check size={13} /><span><strong>v0.3 image verified</strong><small>Source and checksum recorded</small></span></li><li className={v03Installed ? "done" : ""}>{v03Installed ? <Check size={13} /> : <span>4</span>}<span><strong>Physical recovery access</strong><small>{v03Installed ? "Confirmed during attended flash" : "Confirm at flash time"}</small></span></li><li className={v03Installed ? "done" : ""}>{v03Installed ? <Check size={13} /> : <span>5</span>}<span><strong>Explicit human approval</strong><small>{v03Installed ? "Recorded for exact image 836c74cb" : "Required after terminal preview"}</small></span></li></ol>
+        <Panel title="Operator recovery prerequisites" icon={<ShieldCheck size={16} />} className="recovery-panel">
+          <ol><li><span>1</span><span><strong>Obtain exact recovery firmware</strong><small>Operator-supplied; verify the Q3 Max ANSI target</small></span></li><li><span>2</span><span><strong>Capture configuration evidence</strong><small>Macro contents and some advanced state are not included</small></span></li><li><span>3</span><span><strong>Verify the candidate SHA-256</strong><small>Use the exact image approved at the local terminal</small></span></li><li><span>4</span><span><strong>Confirm physical recovery access</strong><small>Test the attended DFU path before relying on it</small></span></li><li><span>5</span><span><strong>Give explicit human approval</strong><small>Never delegate firmware flashing to web or agent paths</small></span></li></ol>
         </Panel>
       </div>
       <section className="feature-panel flash-gate"><ShieldCheck size={22} /><div><h2>Attended terminal only</h2><p>Keysmith deliberately has no web flash control. A human must review the exact image, recovery steps, and device state at the local terminal.</p></div><strong>Web flashing unavailable</strong></section>
-      <section className="feature-panel firmware-compatibility"><Info size={20} /><div><h2>Installed v0.3 · physical gate {gateState}</h2><p>Image <code>2b422a5a12</code> is verified live with stable VIA marker <code>260831</code>. The complete configuration matches the pre-v0.3 snapshot; web apply remains unavailable.</p></div><strong>v0.3 verified · config preserved</strong></section>
+      <section className="feature-panel firmware-compatibility"><Info size={20} /><div><h2>{v03Installed ? `Live protocol ${protocolLabel} · physical gate ${gateState}` : "Public firmware remains a candidate"}</h2><p>{v03Installed ? <>The connected device reports source <code>{installedSource}</code>. Recovery readiness and configuration preservation are not inferred from protocol detection; web apply remains unavailable.</> : <>The public source at <code>{PUBLIC_V03_COMMIT}</code> compiles in CI, but no binary release is published and this exact candidate is not reported by the connected device.</>}</p></div><strong>{v03Installed ? "Live probe evidence" : "Build evidence only"}</strong></section>
     </>
   );
 }
 
 function SettingsPage({ inspection }: Omit<Props, "page" | "onPreview">) {
   const endpoint = globalThis.location?.host || "127.0.0.1:3762";
-  return <><PageHeading title="Settings" description="Local service, network access, and physical-device safety boundaries." /><div className="settings-list"><Panel title="Current endpoint" icon={<Wifi size={16} />}><p>Keysmith binds to loopback. Optional authenticated remote access should terminate in a trusted private network proxy.</p><code>{endpoint}</code><strong className="safe-text">Same origin</strong></Panel><Panel title="Server mutation policy" icon={<LockKeyhole size={16} />}><p>Keymap, macro, RGB EEPROM, wireless, and firmware writes require a reviewed plan and confirmation.</p><strong>{inspection.write_enabled ? "Enabled" : "Blocked"}</strong></Panel><Panel title="Recovery storage" icon={<Archive size={16} />}><p>Keep factory firmware, live snapshots, and device readbacks outside the source repository in private backup storage.</p><strong className="safe-text">Operator managed</strong></Panel></div></>;
+  return <><PageHeading title="Settings" description="Local service, network access, and physical-device safety boundaries." /><div className="settings-list"><Panel title="Current endpoint" icon={<Wifi size={16} />}><p>Keysmith binds to loopback. Optional authenticated remote access should terminate in a trusted private network proxy.</p><code>{endpoint}</code><strong className="safe-text">Same origin</strong></Panel><Panel title="Server mutation policy" icon={<LockKeyhole size={16} />}><p>The browser and server expose no apply path. Macro writes and firmware flashing are unavailable here; supported configuration operations require separate attended tooling.</p><strong>{inspection.write_enabled ? "Device capability reported; server blocked" : "Blocked"}</strong></Panel><Panel title="Recovery storage" icon={<Archive size={16} />}><p>Keep factory firmware, live snapshots, and device readbacks outside the source repository in private backup storage.</p><strong className="safe-text">Operator managed</strong></Panel></div></>;
 }
 
 export function FeatureWorkspace({ page, inspection, onPreview, firmwareProbe }: Props) {
@@ -351,23 +354,23 @@ export function FeatureWorkspace({ page, inspection, onPreview, firmwareProbe }:
 }
 
 const RAIL_COPY: Record<Exclude<Page, "Keymap" | "Overview" | "Activity">, { title: string; body: string; items: Array<[string, string]> }> = {
-  Lighting: { title: "Lighting status", body: "Values begin from the live stock-firmware inspection. Browser drafts never touch RGB EEPROM.", items: [["Effect ID", "Live"], ["Per-key canvas", "Local"], ["Server writes", "Blocked"]] },
+  Lighting: { title: "Lighting status", body: "Values begin from the connected-device inspection. Browser drafts never touch RGB EEPROM.", items: [["Effect ID", "Live"], ["Per-key canvas", "Local"], ["Server writes", "Blocked"]] },
   Macros: { title: "About macros", body: "Macro totals and storage usage come from the connected inspection. Draft actions are browser-local.", items: [["Slots", "Inspected"], ["Buffer", "Inspected"], ["Server writes", "Blocked"]] },
-  Wireless: { title: "Transport boundary", body: "Pairing is a physical keyboard workflow. Current source exposes Keysmith configuration over USB only.", items: [["Bluetooth hosts", "3"], ["2.4 receiver", "Unavailable"], ["USB", "Connected"]] },
-  Diagnostics: { title: "Inspection finding", body: "The reported 50 ms per-key symmetric eager debounce is intentional in factory firmware v1.1.1.", items: [["Raw HID", "Healthy"], ["Macros", "Inspected"], ["Snap Click", "Inspected"]] },
+  Wireless: { title: "Transport boundary", body: "Pairing is a physical keyboard workflow. Current source exposes Keysmith configuration over USB only.", items: [["Bluetooth hosts", "3"], ["2.4 receiver", "Not exposed"], ["USB", "Inspection path"]] },
+  Diagnostics: { title: "Inspection finding", body: "Debounce and protocol values come from the connected-device inspection; verify them before drafting changes.", items: [["Raw HID", "Healthy"], ["Macros", "Inspected"], ["Snap Click", "Inspected"]] },
   Agent: { title: "Safety model", body: "The agent may inspect, explain, snapshot, and draft diffs. It cannot silently mutate the keyboard.", items: [["Inspect", "Allowed"], ["Plan", "Allowed"], ["Flash", "Human-only"]] },
-  Firmware: { title: "Engineering gate", body: "Firmware state comes from a live read-only probe. Flashing remains an attended terminal operation.", items: [["Factory image", "Saved"], ["Snapshots", "Saved"], ["Custom image", "Checking"]] },
-  Settings: { title: "Trust boundary", body: "Tailscale authenticates network access. Device mutation remains a separate privileged operation.", items: [["Network", "Tailnet"], ["Server", "Loopback"], ["Mutation", "Blocked"]] },
+  Firmware: { title: "Engineering gate", body: "Firmware state comes from a live read-only probe. Recovery evidence is operator-supplied and flashing remains attended-terminal-only.", items: [["Public candidate", "Build-validated"], ["Recovery", "Operator supplied"], ["Extension", "Checking"]] },
+  Settings: { title: "Trust boundary", body: "Optional remote access requires an authenticated private proxy. Device mutation remains a separate privileged operation.", items: [["Network", "Deployment-defined"], ["Server", "Loopback"], ["Mutation", "Blocked"]] },
 };
 
 export function FeatureRail({ page, inspection, firmwareProbe }: Props) {
   if (page === "Keymap" || page === "Overview" || page === "Activity") return null;
   const base = RAIL_COPY[page];
-  const firmwareState = firmwareProbe.loading && !firmwareProbe.probe ? "Checking" : firmwareProbe.error ? "Unavailable" : firmwareProbe.probe?.installed ? "Installed" : "Not installed";
+  const firmwareState = firmwareProbe.loading && !firmwareProbe.probe ? "Checking" : firmwareProbe.error ? "Unavailable" : firmwareProbe.probe?.installed ? "Detected live" : "Not detected";
   const items = page === "Macros"
     ? [["Total slots", String(inspection.macros.slots)], ["Used bytes", String(inspection.macros.used_bytes)], ["Server writes", inspection.write_enabled ? "Enabled" : "Blocked"]]
     : page === "Firmware"
-      ? [["Factory image", "Saved"], ["Snapshots", "Saved"], ["Installed image", firmwareState]]
+      ? [["Public candidate", "Build-validated"], ["Recovery", "Operator supplied"], ["Extension", firmwareState]]
       : base.items;
   return <aside className="agent-panel feature-rail"><div className="agent-heading"><Lightbulb size={18} /><span>{base.title}</span></div><p>{base.body}</p><div className="rail-list">{items.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><p className="safety-note"><LockKeyhole size={14} />No keyboard write on this page</p></aside>;
 }

@@ -1,0 +1,17 @@
+{
+  "name": "Keysmith",
+  "short_name": "Keysmith",
+  "description": "Agent-first, physically authorized control for the Keychron Q3 Max.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1113",
+  "theme_color": "#0f1113",
+  "icons": [
+    {
+      "src": "/assets/keysmith-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

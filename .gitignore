@@ -1,6 +1,8 @@
 /target
 /apps/web/node_modules
 /apps/web/dist
+/apps/site/node_modules
+/apps/site/dist
 /apps/web/*.tsbuildinfo
 /apps/web/vite.config.js
 /apps/web/vite.config.d.ts

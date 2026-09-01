@@ -20,6 +20,8 @@
 </p>
 
 <p align="center">
+  <a href="https://keychron.karti.ai/"><strong>Website</strong></a>
+  ·
   <a href="#quick-start"><strong>Quick start</strong></a>
   ·
   <a href="#use-the-cli"><strong>CLI</strong></a>
@@ -30,6 +32,12 @@
   ·
   <a href="SECURITY.md"><strong>Security</strong></a>
 </p>
+
+> [!NOTE]
+> Keysmith is an early public source preview for technical Linux users. There
+> is no packaged desktop installer or downloadable Keysmith firmware release
+> yet. The public firmware candidate is compiled in CI; installation remains a
+> separate advanced, attended workflow.
 
 <p align="center">
   <img src="docs/screenshots/keysmith-overview.png" alt="Keysmith control center showing the live Q3 Max keymap, local draft state, rollback evidence, and firmware boundary" width="100%">
@@ -217,7 +225,8 @@ keysmith/
 │   ├── keysmith-core/    # HID discovery, protocol decoding, snapshots, plans
 │   ├── keysmith-cli/     # keychronctl read-only and offline-plan commands
 │   └── keysmith-server/  # loopback-only API and static web serving
-├── apps/web/             # React control surface
+├── apps/web/             # Private React control surface
+├── apps/site/            # Static public launch site
 ├── docs/                 # protocol, hardware, design, and visual references
 └── deploy/               # generic user-service example
 ```
@@ -263,8 +272,10 @@ and wireless limitations are documented in
 [`docs/DEVICE_NOTES.md`](docs/DEVICE_NOTES.md).
 
 The Rust/React application is [MIT licensed](LICENSE). Firmware source remains
-in the separate GPL-2.0 Keychron/QMK fork. Do not redistribute a firmware
-binary without its complete corresponding source and build inputs.
+in the separate GPL Keychron/QMK fork with its upstream notices intact.
+Keysmith additions are GPL-2.0-or-later; the combined ARM image also links
+GPLv3 ChibiOS and must be distributed under GPLv3 with complete corresponding
+source and build inputs.
 
 Keysmith is an independent community project and is not affiliated with or
 endorsed by Keychron, QMK, or VIA.

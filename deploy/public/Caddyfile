@@ -1,0 +1,44 @@
+# keychron.karti.ai — public, static Keysmith project site.
+#
+# This fragment is installed as /etc/caddy/keychron.karti.ai.caddy and imported
+# once by /etc/caddy/Caddyfile. It intentionally has no reverse_proxy directive:
+# the USB-connected Keysmith application remains loopback/tailnet-only.
+keychron.karti.ai {
+	# tailscaled owns the Tailscale listeners on cloud-2. Public traffic reaches
+	# Caddy through the Oracle VNIC, so this bind is part of the fleet contract.
+	bind 10.0.0.2
+	import sec
+	encode zstd gzip
+	root * /var/www/keychron.karti.ai/current
+
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; media-src 'none'; worker-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests"
+		Permissions-Policy "accelerometer=(), autoplay=(), bluetooth=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), speaker-selection=(), usb=(), xr-spatial-tracking=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+
+	@immutable_assets path_regexp ^/assets/.+-[A-Za-z0-9_-]{6,}\.(?:css|js)$
+	header @immutable_assets Cache-Control "public, max-age=31536000, immutable"
+
+	@documents not path_regexp ^/assets/.+-[A-Za-z0-9_-]{6,}\.(?:css|js)$
+	header @documents Cache-Control "no-cache"
+
+	# Keep the public site a file server. The API matcher is first so even a
+	# GET cannot fall through to a similarly named file. Other non-read methods
+	# are denied before try_files/file_server can handle them.
+	route {
+		@api path /api /api/*
+		respond @api 404
+
+		@non_read not method GET HEAD
+		respond @non_read 405
+
+		# There are no client-side URL routes today. A real unknown path stays a
+		# 404 instead of being rewritten to index.html.
+		try_files {path} {path}/index.html
+		file_server
+	}
+}

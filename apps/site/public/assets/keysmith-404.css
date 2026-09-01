@@ -1,0 +1,39 @@
+:root {
+  color-scheme: dark;
+  background: #0f1113;
+  color: #f4f2ec;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  display: grid;
+  min-height: 100vh;
+  margin: 0;
+  place-items: center;
+}
+
+main {
+  width: min(36rem, calc(100% - 3rem));
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(3rem, 10vw, 6rem);
+  letter-spacing: -0.06em;
+}
+
+p {
+  color: #92989f;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+a {
+  color: #f4f2ec;
+  text-underline-offset: 0.3em;
+}
+
+a:focus-visible {
+  outline: 2px solid #ee4d45;
+  outline-offset: 5px;
+}

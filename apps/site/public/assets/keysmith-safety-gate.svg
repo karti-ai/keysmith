@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="500" viewBox="0 0 1400 500" role="img" aria-labelledby="title desc">
+  <title id="title">Keysmith firmware safety gate</title>
+  <desc id="desc">The firmware begins locked, accepts one exact prepared operation, requires a three-second physical chord to arm, accepts one matching commit, applies once, verifies and relocks. Cancel, timeout, error, disconnect, or reset return to locked.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0d1117"/><stop offset="1" stop-color="#111820"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity=".32"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5 0 10z" fill="#66747f"/></marker>
+    <marker id="returnArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5 0 10z" fill="#d84a43"/></marker>
+  </defs>
+  <rect width="1400" height="500" rx="24" fill="url(#bg)"/>
+  <text x="48" y="55" fill="#f4f2ec" font-family="Inter,Segoe UI,sans-serif" font-size="30" font-weight="700">A transaction, not an unlock.</text>
+  <text x="48" y="85" fill="#8f9aa5" font-family="Inter,Segoe UI,sans-serif" font-size="16">One reviewed operation crosses the gate. Every terminal path closes it.</text>
+
+  <g filter="url(#shadow)" font-family="Inter,Segoe UI,sans-serif">
+    <g transform="translate(48 146)">
+      <rect width="210" height="132" rx="16" fill="#14231f" stroke="#2bd99b" stroke-width="1.5"/>
+      <circle cx="28" cy="30" r="9" fill="#2bd99b"/><text x="48" y="37" fill="#f4f2ec" font-size="19" font-weight="800">LOCKED</text>
+      <text x="20" y="76" fill="#9db5ad" font-size="14">Default state</text><text x="20" y="102" fill="#6f8a81" font-size="12">All legacy setters denied</text>
+    </g>
+    <g transform="translate(320 146)">
+      <rect width="210" height="132" rx="16" fill="#282215" stroke="#dba928" stroke-width="1.5"/>
+      <circle cx="28" cy="30" r="9" fill="#dba928"/><text x="48" y="37" fill="#f4f2ec" font-size="19" font-weight="800">PREPARED</text>
+      <text x="20" y="76" fill="#c2b797" font-size="14">Exact plan tag + payload</text><text x="20" y="102" fill="#8e8366" font-size="12">30-second window</text>
+    </g>
+    <g transform="translate(592 146)">
+      <rect width="210" height="132" rx="16" fill="#2a191b" stroke="#d84a43" stroke-width="1.5"/>
+      <circle cx="28" cy="30" r="9" fill="#d84a43"/><text x="48" y="37" fill="#f4f2ec" font-size="19" font-weight="800">ARMED</text>
+      <text x="20" y="76" fill="#c4a5a3" font-size="14">Physical chord held</text><text x="20" y="102" fill="#8f6c69" font-size="12">Short-lived · plan-bound</text>
+    </g>
+    <g transform="translate(864 146)">
+      <rect width="210" height="132" rx="16" fill="#19222a" stroke="#6686a0" stroke-width="1.5"/>
+      <circle cx="28" cy="30" r="9" fill="#78a5c8"/><text x="48" y="37" fill="#f4f2ec" font-size="19" font-weight="800">APPLY ONCE</text>
+      <text x="20" y="76" fill="#a5b5c1" font-size="14">Matching commit only</text><text x="20" y="102" fill="#71828f" font-size="12">One bounded operation</text>
+    </g>
+    <g transform="translate(1136 146)">
+      <rect width="216" height="132" rx="16" fill="#14231f" stroke="#2bd99b" stroke-width="1.5"/>
+      <circle cx="28" cy="30" r="9" fill="#2bd99b"/><text x="48" y="37" fill="#f4f2ec" font-size="19" font-weight="800">RELOCKED</text>
+      <text x="20" y="76" fill="#9db5ad" font-size="14">Read back + archive</text><text x="20" y="102" fill="#6f8a81" font-size="12">No operation survives</text>
+    </g>
+  </g>
+
+  <g stroke="#66747f" stroke-width="2.5" fill="none" marker-end="url(#arrow)">
+    <path d="M262 212H310"/><path d="M534 212H582"/><path d="M806 212H854"/><path d="M1078 212H1126"/>
+  </g>
+  <g fill="#8f9aa5" font-family="Inter,Segoe UI,sans-serif" font-size="11" font-weight="700" text-anchor="middle">
+    <text x="286" y="132">EXACT PACKET</text><text x="558" y="117">ESC + SPACE + RCTRL</text><text x="558" y="132">HOLD 3 SECONDS</text><text x="830" y="132">MATCHING COMMIT</text><text x="1102" y="132">VERIFY</text>
+  </g>
+
+  <path d="M1242 292C1242 387 185 387 153 290" stroke="#d84a43" stroke-width="2.5" stroke-dasharray="8 6" fill="none" marker-end="url(#returnArrow)"/>
+  <rect x="323" y="343" width="754" height="52" rx="26" fill="#25191b" stroke="#54282c"/>
+  <text x="700" y="365" text-anchor="middle" fill="#ff958e" font-family="Inter,Segoe UI,sans-serif" font-size="12" font-weight="800">CANCEL · TIMEOUT · ERROR · TRANSPORT CHANGE · DISCONNECT · RESET</text>
+  <text x="700" y="383" text-anchor="middle" fill="#9f7471" font-family="Inter,Segoe UI,sans-serif" font-size="11">Any terminal condition returns directly to LOCKED</text>
+
+  <rect x="48" y="432" width="1304" height="42" rx="12" fill="#131b21" stroke="#27323b"/>
+  <text x="700" y="458" text-anchor="middle" fill="#9ba7b1" font-family="Inter,Segoe UI,sans-serif" font-size="13">The chord authorizes only the already-prepared operation. It never creates a reusable or global write mode.</text>
+</svg>

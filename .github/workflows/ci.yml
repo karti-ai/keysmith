@@ -41,3 +41,35 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=high
       - run: npm run build
+
+  public-site:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/site
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/site/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run build
+      - run: npm run test:sites
+      - run: npm run test:qa
+      - name: Verify deployment and rollback contract
+        run: node ../../deploy/public/test-deploy-contract.mjs
+      - name: Generate exact release provenance
+        run: |
+          source_sha=$(git rev-parse HEAD)
+          node ../../deploy/public/generate-release-manifest.mjs \
+            --dir dist/client \
+            --source-sha "$source_sha"
+      - name: Verify static-only release boundary
+        run: |
+          source_sha=$(git rev-parse HEAD)
+          node ../../deploy/public/check-static.mjs \
+            --dir dist/client \
+            --sha "$source_sha"

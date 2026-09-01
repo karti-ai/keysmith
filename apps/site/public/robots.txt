@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# Initial source-preview launch: public by URL, intentionally not indexed.

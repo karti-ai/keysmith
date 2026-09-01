@@ -29,8 +29,23 @@ export function OverviewPage({ inspection, firmwareProbe, status, observedAt, on
   const maxRisk = plan?.changes.some((change) => change.risk === "high") ? "High" : plan?.changes.some((change) => change.risk === "medium") ? "Medium" : "Low";
   const protocol = firmwareProbe.probe?.protocol;
   const protocolVersion = protocol ? `${protocol.major}.${protocol.minor}` : "unknown";
-  const v02Installed = Boolean(protocol && (protocol.major > 0 || protocol.minor >= 2));
-  const v03Installed = Boolean(protocol && (protocol.major > 0 || protocol.minor >= 3));
+  const extensionDetected = firmwareProbe.probe?.installed === true;
+  const liveExtensionStatus = firmwareProbe.loading && !firmwareProbe.probe
+    ? "Checking"
+    : firmwareProbe.error
+      ? "Probe unavailable"
+      : extensionDetected
+        ? "Detected live"
+        : "Not detected";
+  const liveExtensionName = protocol?.build?.keysmith ?? "Keysmith extension";
+  const liveExtensionDetail = extensionDetected && protocol
+    ? `Protocol ${protocolVersion} reported over USB`
+    : firmwareProbe.error
+      ? "Live firmware evidence is unavailable"
+      : firmwareProbe.loading
+        ? "Checking the connected device"
+        : "Not reported by the connected device";
+  const liveExtensionSource = protocol?.build?.qmk_git_hash ? `Source ${protocol.build.qmk_git_hash}` : "Source not reported";
 
   function changeLayer(next: number) {
     setActiveLayer(next);
@@ -75,13 +90,13 @@ export function OverviewPage({ inspection, firmwareProbe, status, observedAt, on
             <div className="activity-list">{PROJECT_EVIDENCE.activity.map((item) => <div key={item.title}><i /><time>{item.time}</time><span><strong>{item.title}</strong><small>{item.detail}</small></span><em>{item.type}</em></div>)}</div>
           </section>
           <section className="overview-panel evidence-panel">
-            <div className="overview-panel-title"><div><h2>Snapshots (rollback)</h2><span>Checked-in static evidence</span></div><button onClick={() => onNavigate("Firmware")}>View all</button></div>
+            <div className="overview-panel-title"><div><h2>Recovery evidence classes</h2><span>Reference requirements</span></div><button onClick={() => onNavigate("Firmware")}>View all</button></div>
             <div className="snapshot-list">{PROJECT_EVIDENCE.snapshots.map((item) => <div key={item.name}><FileJson /><span><strong>{item.name}</strong><small>{item.detail}</small></span><time>{item.time}</time></div>)}</div>
           </section>
           <section className="overview-panel firmware-track">
             <h2>Firmware track</h2>
-            <div><strong>v1.1.1 + KS {protocolVersion}</strong><span className="installed-label">Installed</span><small>Verified live over USB</small><em>Exact source</em></div>
-            <div><strong>{v03Installed ? "Keysmith 0.2" : v02Installed ? "Keysmith 0.1" : "v0.2.0-dev"}</strong><span className="candidate-label">{v02Installed ? "Archived" : "Candidate"}</span><small>{v03Installed ? "Previous read-only build" : v02Installed ? "Earlier read-only build" : "Engineering in progress"}</small><em>{v02Installed ? "Rollback available" : "Not flashed"}</em></div>
+            <div><strong>{liveExtensionName}</strong><span className={extensionDetected ? "installed-label" : "candidate-label"}>{liveExtensionStatus}</span><small>{liveExtensionDetail}</small><em>{liveExtensionSource}</em></div>
+            <div><strong>Keysmith 0.3.0-candidate</strong><span className="candidate-label">Public candidate</span><small>Source bbbd4fac3c · CI build validated</small><em>No binary release</em></div>
             <p><Info />Firmware flashing remains attended-terminal-only. No web flash operations.</p>
           </section>
           <section className="evidence-source"><ShieldCheck /><span><strong>Rollback boundary</strong><small>Operator-supplied snapshots stay private</small></span></section>
