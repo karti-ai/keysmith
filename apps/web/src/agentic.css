@@ -1,0 +1,72 @@
+.agentic-panel { display: flex; flex-direction: column; }
+.agentic-panel .agent-heading button { margin-left: auto; border: 0; background: transparent; color: var(--muted); padding: 5px; cursor: pointer; }
+.agent-chevron { transition: transform 180ms ease; }
+.agent-chevron.open { transform: rotate(180deg); }
+
+.agent-request-label { margin: 25px 0 8px; color: #a5abb0; font-size: 12px; letter-spacing: .01em; }
+.agent-request { width: 100%; resize: vertical; min-height: 90px; max-height: 180px; border: 1px solid #3a4045; border-radius: 7px; padding: 14px; color: #e9e8e4; background: #1a1d20; font: 13px/1.55 Inter, ui-sans-serif, sans-serif; transition: border-color 140ms ease, box-shadow 140ms ease; }
+.agent-request:focus { outline: 0; border-color: #656c72; box-shadow: 0 0 0 3px rgba(255,255,255,.05); }
+.agent-generate { width: 100%; height: 36px; margin-top: 9px; border: 1px solid #3f454a; border-radius: 5px; background: #202428; color: #e6e6e2; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; cursor: pointer; }
+.agent-generate svg { color: var(--accent-bright); }
+.agent-generate:hover { background: #292e32; }
+
+.agentic-panel .proposal-heading { margin: 30px 0 13px; }
+.agentic-panel .proposal-heading small { margin-left: auto; color: #777e85; font: 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+.agent-plan-preview { border: 1px solid #353a3f; border-radius: 7px; background: rgba(18,21,23,.78); overflow: hidden; }
+.agent-plan-summary { padding: 15px 16px 14px; border-bottom: 1px solid #30353a; }
+.agent-plan-summary strong { font-size: 13px; font-weight: 650; }
+.agent-plan-summary p { margin: 6px 0 0; color: #979da3; font-size: 11px; line-height: 1.45; }
+.agent-plan-group { display: grid; grid-template-columns: 30px 1fr; gap: 5px; padding: 13px 15px; border-bottom: 1px solid #292e32; }
+.agent-plan-group:last-child { border-bottom: 0; }
+.agent-plan-index { color: #666d73; font: 10px ui-monospace, monospace; padding-top: 2px; }
+.agent-plan-group h3 { margin: 0; color: #c9cdd0; font-size: 11px; font-weight: 640; text-transform: uppercase; letter-spacing: .055em; }
+.agent-plan-group ul { margin: 7px 0 0; padding: 0; list-style: none; }
+.agent-plan-group li { position: relative; margin-top: 5px; padding-left: 12px; color: #969ca2; font-size: 10px; line-height: 1.4; }
+.agent-plan-group li::before { content: ""; position: absolute; left: 0; top: .52em; width: 4px; height: 4px; border-radius: 50%; background: #686f75; }
+.agent-plan-group.guarded { background: rgba(67,181,129,.035); }
+.agent-plan-group.guarded h3, .agent-plan-group.guarded .agent-plan-index { color: #67bd94; }
+.agent-plan-group.guarded li::before { background: var(--safe); }
+.preview-only-button { background: #26352f; border-color: #426b59; box-shadow: inset 0 1px rgba(255,255,255,.06); }
+.preview-only-button:hover { background: #30473d; }
+.agentic-panel .safety-note { line-height: 1.4; text-align: center; }
+
+.firmware-probe { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 18px; }
+.firmware-probe header { display: flex; align-items: center; margin-bottom: 12px; }
+.firmware-probe-title { display: flex; align-items: center; gap: 8px; color: #b5bac0; font-size: 12px; font-weight: 620; }
+.firmware-probe header > button { margin-left: auto; width: 28px; height: 28px; border: 1px solid #353b40; border-radius: 5px; background: #171a1d; color: #858c92; display: grid; place-items: center; cursor: pointer; }
+.firmware-probe header > button:disabled { opacity: .55; cursor: wait; }
+.firmware-probe-state { min-height: 49px; border: 1px solid #33393e; border-radius: 6px; display: flex; align-items: center; gap: 10px; padding: 10px 11px; background: #171a1d; color: #aeb4b9; }
+.firmware-probe-state > span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.firmware-probe-state strong { color: #e2e4e5; font-size: 11px; }
+.firmware-probe-state small { color: #858c92; font-size: 9px; overflow: hidden; text-overflow: ellipsis; }
+.firmware-probe-state.safe { border-color: rgba(67,181,129,.38); color: var(--safe); }
+.firmware-probe-state.warning { border-color: rgba(216,74,67,.38); color: #df706a; }
+.firmware-probe-state.stock { color: #9da4aa; }
+.firmware-probe-state.muted { color: #747b81; }
+.firmware-probe-facts { margin: 8px 0 0; }
+.firmware-probe-facts > div { min-height: 28px; display: flex; align-items: center; border-bottom: 1px solid #262b2f; font-size: 9px; }
+.firmware-probe-facts dt { color: #747b81; }
+.firmware-probe-facts dd { margin-left: auto; color: #b8bdc1; display: flex; align-items: center; gap: 5px; }
+.firmware-probe-facts dd.locked { color: #72bd99; }
+.firmware-probe > p { margin: 9px 1px 0; color: #727980; font-size: 9px; line-height: 1.45; }
+
+.agentic-palette .palette-title > span { font-weight: 620; }
+.agentic-palette .palette-title small { color: #62b58d; font: 9px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.palette-section-label { padding: 8px 12px 3px; color: #666d73; font-size: 9px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; }
+.agentic-palette > button:disabled { opacity: .62; cursor: wait; }
+.agentic-palette > button kbd { margin-left: auto; color: #666d73; font: 10px ui-monospace, monospace; }
+.agentic-palette footer { margin: 7px -8px -8px; padding: 12px 18px; border-top: 1px solid var(--border); border-radius: 0 0 9px 9px; background: #131618; color: #737a80; display: flex; align-items: center; gap: 8px; font-size: 9px; }
+
+@media (max-width: 1280px) {
+  .agent-request { min-height: 78px; }
+  .agent-plan-group { padding: 11px 12px; }
+}
+
+@media (max-width: 900px) {
+  .agentic-panel { padding-bottom: 28px; }
+  .firmware-probe { margin-top: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-chevron { transition: none; }
+}

@@ -1,0 +1,12 @@
+/target
+/apps/web/node_modules
+/apps/web/dist
+/apps/web/*.tsbuildinfo
+/apps/web/vite.config.js
+/apps/web/vite.config.d.ts
+*.log
+.env
+.env.*
+/backups/
+/firmware/**/*.bin
+/firmware/**/*.zip
