@@ -73,8 +73,8 @@ From the repository root, while the checkout is clean and at the exact commit:
 source_sha=$(git rev-parse HEAD)
 npm --prefix apps/site ci
 npm --prefix apps/site audit --audit-level=high
-npm --prefix apps/site run test:sites
 npm --prefix apps/site run build
+npm --prefix apps/site run test:sites
 npm --prefix apps/site run test:qa
 node deploy/public/generate-release-manifest.mjs \
   --dir apps/site/dist/client \
