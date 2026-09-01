@@ -325,9 +325,11 @@ node -e '
   if (manifest.schema !== "keysmith.public-release/v1" || manifest.source?.commit !== expected) process.exit(1);
 ' "$sha"
 find "$stage" -type f -exec chmod 0444 {} +
-find "$stage" -type d -exec chmod 0555 {} +
 cd /
 mv -- "$stage" "$release"
+# A directory must remain writable while rename(2) updates its `..` entry.
+# Make the immutable tree read-only only after the cross-directory move.
+find "$release" -type d -exec chmod 0555 {} +
 REMOTE
   fi
 

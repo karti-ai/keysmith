@@ -23,6 +23,11 @@ assert.match(
   deploy,
   /restore_deployment\(\)[\s\S]*remote_restore_pointer "\$old_sha" "\$old_previous"[\s\S]*restore_last_caddy/,
 );
+assert.match(
+  deploy,
+  /mv -- "\$stage" "\$release"[\s\S]*find "\$release" -type d -exec chmod 0555/,
+  "release directories must become read-only only after their cross-directory rename",
+);
 
 const caddyProbe = spawnSync("caddy", ["version"], { encoding: "utf8" });
 if (caddyProbe.status === 0) {
