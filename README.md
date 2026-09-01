@@ -93,8 +93,9 @@ part of the public source distribution.
 ## Firmware source and licensing
 
 The Rust/React Keysmith application is licensed under MIT. The keyboard
-firmware is maintained as a separate fork of Keychron QMK and remains under its
-upstream GPL licenses and notices. Do not redistribute a firmware binary
+firmware is maintained in the separate
+[Keysmith QMK fork](https://github.com/karti-ai/keysmith-qmk) and remains under
+its upstream GPL licenses and notices. Do not redistribute a firmware binary
 without making the complete corresponding source and build inputs available.
 
 Keysmith is an independent community project and is not affiliated with or
