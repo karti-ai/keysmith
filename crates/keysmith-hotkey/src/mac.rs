@@ -81,6 +81,41 @@ pub fn learn() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Build the tap, waiting for Accessibility rather than giving up.
+///
+/// Exiting when the tap cannot be created makes granting permission a two step
+/// job: the user grants it, nothing happens, and the daemon has to be restarted
+/// by hand before it works. Worse under launchd with KeepAlive, where the
+/// process crash-loops and every restart logs the same refusal, so the log fills
+/// with what looks like a hard failure while the fix is one toggle away.
+///
+/// Waiting instead means the daemon starts working the moment permission
+/// appears, with nothing else to do.
+fn build_tap<F>(make: F) -> CGEventTap<'static>
+where
+    F: Fn() -> Result<CGEventTap<'static>, ()>,
+{
+    let mut complained = false;
+    loop {
+        match make() {
+            Ok(tap) => {
+                if complained {
+                    eprintln!("accessibility granted; the tap is live");
+                }
+                return tap;
+            }
+            Err(()) => {
+                if !complained {
+                    eprintln!("{}", accessibility_error());
+                    eprintln!("waiting for permission; this will start on its own once granted");
+                    complained = true;
+                }
+                std::thread::sleep(Duration::from_secs(3));
+            }
+        }
+    }
+}
+
 pub fn run(config: Config, log_all: bool) -> anyhow::Result<()> {
     if log_all {
         eprintln!("logging every keycode; press the key you want to bind");
@@ -94,15 +129,10 @@ pub fn run(config: Config, log_all: bool) -> anyhow::Result<()> {
         );
     }
 
-    // Press time per keycode. macOS repeats KeyDown while a key is held, so the
-    // first KeyDown starts the clock and repeats are ignored; the decision is
-    // made on KeyUp, which is the only point the duration is known.
-    //
-    // A Cell rather than a plain local: the tap callback is Fn, not FnMut,
-    // because Core Graphics may invoke it from more than one place.
-    let pressed_at: Cell<Option<(i64, Instant)>> = Cell::new(None);
-
-    let tap = CGEventTap::new(
+    let tap = build_tap(move || {
+        let config = config.clone();
+        let pressed_at: Cell<Option<(i64, Instant)>> = Cell::new(None);
+        CGEventTap::new(
         CGEventTapLocation::HID,
         CGEventTapPlacement::HeadInsertEventTap,
         CGEventTapOptions::Default,
@@ -155,8 +185,9 @@ pub fn run(config: Config, log_all: bool) -> anyhow::Result<()> {
             }
             None
         },
-    )
-    .map_err(|_| accessibility_error())?;
+        )
+        .map_err(|_| ())
+    });
 
     attach(&tap);
     CFRunLoop::run_current();
