@@ -1,0 +1,16 @@
+[package]
+name = "keysmith-hotkey"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+# The event tap is macOS-only. On other platforms this crate builds to a binary
+# that explains itself and exits, rather than failing to compile the workspace.
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"

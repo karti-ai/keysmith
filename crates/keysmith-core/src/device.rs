@@ -98,3 +98,109 @@ impl Transport for HidrawTransport {
         Ok(response)
     }
 }
+
+/// Raw HID usage page and usage of the Q3 Max's Keysmith interface.
+///
+/// Every Keychron Q3 Max exposes several HID interfaces on the same VID/PID;
+/// only this one carries the vendor protocol. `hidraw` discovery above
+/// distinguishes them by report descriptor, which Linux exposes and macOS does
+/// not, so the portable path matches on usage page and usage instead.
+#[cfg(not(target_os = "linux"))]
+pub const RAW_USAGE_PAGE: u16 = 0xff60;
+#[cfg(not(target_os = "linux"))]
+pub const RAW_USAGE: u16 = 0x61;
+
+#[cfg(not(target_os = "linux"))]
+/// A `hidapi`-backed transport.
+///
+/// `hidraw` is Linux-only: it reads `/sys/class/hidraw`, which does not exist on
+/// macOS or Windows. That made the whole tool Linux-only, which is a problem
+/// when the keyboard normally lives on a laptop. This backend talks through
+/// IOHIDManager on macOS and hid.dll on Windows, and still works on Linux.
+pub struct HidApiTransport {
+    device: hidapi::HidDevice,
+}
+
+#[cfg(not(target_os = "linux"))]
+impl HidApiTransport {
+    /// Open the Q3 Max's Keysmith interface, whichever platform we are on.
+    pub fn open() -> Result<Self, ProtocolError> {
+        let api = hidapi::HidApi::new().map_err(|error| ProtocolError::Hid(error.to_string()))?;
+        let info = api
+            .device_list()
+            .find(|device| {
+                device.vendor_id() == crate::KEYCHRON_VENDOR_ID
+                    && device.product_id() == crate::Q3_MAX_ANSI_PRODUCT_ID
+                    && device.usage_page() == RAW_USAGE_PAGE
+                    && device.usage() == RAW_USAGE
+            })
+            .ok_or(ProtocolError::DeviceNotFound)?;
+        let device = info
+            .open_device(&api)
+            .map_err(|error| ProtocolError::Hid(error.to_string()))?;
+        Ok(Self { device })
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+impl Transport for HidApiTransport {
+    fn exchange(&mut self, request: &[u8]) -> Result<[u8; 32], ProtocolError> {
+        if request.len() > 32 {
+            return Err(ProtocolError::RequestTooLarge(request.len()));
+        }
+
+        // Same convention as hidraw: byte zero is the report ID, and QMK Raw HID
+        // uses unnumbered reports, so it stays zero.
+        let mut report = [0_u8; 33];
+        report[1..1 + request.len()].copy_from_slice(request);
+        self.device
+            .write(&report)
+            .map_err(|error| ProtocolError::Hid(error.to_string()))?;
+
+        let mut response = [0_u8; 32];
+        match self.device.read_timeout(&mut response, 1_500) {
+            Ok(0) => Err(ProtocolError::Timeout),
+            Ok(_) => Ok(response),
+            Err(error) => Err(ProtocolError::Hid(error.to_string())),
+        }
+    }
+}
+
+/// Either transport, so callers do not care which one opened.
+pub enum KeyboardTransport {
+    Hidraw(HidrawTransport),
+    #[cfg(not(target_os = "linux"))]
+    HidApi(HidApiTransport),
+}
+
+impl Transport for KeyboardTransport {
+    fn exchange(&mut self, request: &[u8]) -> Result<[u8; 32], ProtocolError> {
+        match self {
+            Self::Hidraw(transport) => transport.exchange(request),
+            #[cfg(not(target_os = "linux"))]
+            Self::HidApi(transport) => transport.exchange(request),
+        }
+    }
+}
+
+/// Open the connected keyboard by whichever route this platform supports.
+///
+/// `hidraw` is tried first because it is the path validated on the reference
+/// board, and it falls through to `hidapi` when the sysfs tree is absent or the
+/// interface is not there.
+pub fn open_keyboard() -> Result<(KeyboardTransport, String), ProtocolError> {
+    match discover_q3_max_raw_hid() {
+        Ok(path) => {
+            let transport = HidrawTransport::open(&path)?;
+            let label = path.display().to_string();
+            Ok((KeyboardTransport::Hidraw(transport), label))
+        }
+        #[cfg(not(target_os = "linux"))]
+        Err(_) => {
+            let transport = HidApiTransport::open()?;
+            Ok((KeyboardTransport::HidApi(transport), "hidapi".to_owned()))
+        }
+        #[cfg(target_os = "linux")]
+        Err(error) => Err(error),
+    }
+}

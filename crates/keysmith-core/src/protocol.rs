@@ -24,6 +24,8 @@ pub enum ProtocolError {
     UnexpectedResponse { command: u8, response: String },
     #[error("device reports {0} layers; this build expects four Q3 Max layers")]
     UnexpectedLayerCount(u8),
+    #[error("HID error: {0}")]
+    Hid(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]

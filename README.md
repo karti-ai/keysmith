@@ -7,7 +7,7 @@
 <p align="center">
   A local-first control surface, CLI, and safety model for the
   <strong>Keychron Q3 Max</strong>.<br>
-  See everything. Draft locally. Keep hardware writes attended.
+  See everything. Plan every change. Never flash from software.
 </p>
 
 <p align="center">
@@ -53,11 +53,18 @@ writes, and firmware updates into one opaque action. Keysmith separates them.
 | **Observe** | Reads identity, firmware, layers, encoders, RGB, debounce, wireless policy, and privacy-safe macro metadata. |
 | **Draft** | Keeps edits in browser-local state and shows explicit before/after scopes. |
 | **Plan** | Builds deterministic, inspectable plans with risk and rollback evidence. |
-| **Authorize** | Leaves any hardware mutation to a separate, attended terminal workflow and a physical keyboard chord. |
+| **Apply** | Writes configuration through a plan bound to one exact staged operation, and relocks after every commit. |
 | **Recover** | Keeps snapshots and firmware recovery outside the public repository and outside the web server. |
 
 The result feels like a modern keyboard IDE without turning a browser, remote
-agent, or background service into an unattended HID writer.
+agent or background service into a firmware flasher.
+
+Configuration and firmware are treated as different kinds of risk. Changing a
+keycode, an RGB profile, an encoder binding, debounce or wireless timeouts is
+recoverable in software: every change is planned against a snapshot and carries
+its own rollback. Those apply directly. Flashing is not recoverable in software,
+so it is not in the protocol at all -- DFU is entered by physically holding Esc
+while reconnecting the keyboard, and no host tool can put the board there.
 
 ## What works today
 
@@ -67,7 +74,9 @@ agent, or background service into an unattended HID writer.
 | Four-layer keymap viewer | Ready | Accurate matrix, local selection |
 | Lighting, macro, wireless, and diagnostics workspaces | Ready | Browser-local drafts |
 | Immutable snapshots and deterministic plan diffs | Ready | Rust core |
-| v0.3 attended packet compilation | Ready | Offline; opens no HID device |
+| Plan compilation | Ready | Offline; opens no HID device |
+| Configuration writes | Ready | Firmware 0.5+; plan-bound, relocks after each commit |
+| macOS and Windows | Ready | Via hidapi; Linux uses hidraw |
 | Browser/server apply | Intentionally absent | No route exists |
 | Firmware flashing | Intentionally absent | Separate local DFU procedure |
 | Bluetooth configuration transport | Not supported | Bluetooth remains a typing transport |
@@ -151,7 +160,27 @@ Build and inspect a deterministic local plan:
 ```
 
 `plan prepare` is an offline compiler. It prints candidate v0.3 packets and
-never opens the keyboard. There is no CLI apply command.
+never opens the keyboard.
+
+Apply it when you are satisfied:
+
+```sh
+./target/release/keychronctl apply --file plan.json --dry-run
+./target/release/keychronctl apply --file plan.json
+```
+
+Or skip the file entirely and use a scene, which plans against the live board:
+
+```sh
+./target/release/keychronctl scene capture before-my-change
+./target/release/keychronctl set rgb --hue 160 --dry-run
+./target/release/keychronctl set rgb --hue 160
+./target/release/keychronctl scene apply before-my-change   # undo
+```
+
+`keychronctl doctor` reports what is connected and what is possible, and exits
+0 when writes are available, 1 when the board is read-only and 2 when no board
+was found, so a script can branch without parsing output.
 
 ## The firmware gate
 
@@ -164,8 +193,9 @@ accepts one matching commit, applies once, verifies, and relocks.
   <img src="docs/visuals/safety-gate.svg" alt="State diagram from locked to prepared, physically armed, apply once, verified and relocked, with all terminal paths returning to locked" width="100%">
 </p>
 
-The public host application stops at plan inspection and offline packet
-compilation. It does not provide an unattended executor for this firmware
+The web server stops at inspection and plan preview. It has no apply route, and
+the CLI is the only thing that writes. Firmware flashing is not exposed by any
+component
 capability. See the complete
 [v0.3 protocol specification](docs/V0_3_ATTENDED_PROTOCOL.md).
 
