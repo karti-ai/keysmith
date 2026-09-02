@@ -7,8 +7,8 @@ use keysmith_core::{
     execute_bundle_connected, inspect_connected, inspect_plan, probe_connected,
 };
 use keysmith_core::{
-    ConfigurationSnapshot as Snapshot, Scene, SceneRgb, cancel, open_keyboard, scenes, write_mode,
-    write_state,
+    ConfigurationSnapshot as Snapshot, Keycode, Scene, SceneEncoder, SceneKey, SceneRgb, cancel,
+    open_keyboard, scenes, write_mode, write_state,
 };
 
 #[derive(Parser)]
@@ -156,6 +156,44 @@ enum SetCommand {
         #[arg(long)]
         json: bool,
     },
+    /// Rebind one key. Accepts a name (KC_F18, or just "a") or a number.
+    Keycode {
+        #[arg(long)]
+        layer: u8,
+        #[arg(long)]
+        row: u8,
+        #[arg(long)]
+        column: u8,
+        /// Keycode name or number, e.g. KC_F18, a, 0x006d, 109.
+        #[arg(long, value_parser = parse_keycode)]
+        keycode: Keycode,
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Rebind one encoder direction.
+    Encoder {
+        #[arg(long)]
+        layer: u8,
+        /// Which way the knob turns.
+        #[arg(long, value_parser = ["cw", "ccw"])]
+        direction: String,
+        #[arg(long, value_parser = parse_keycode)]
+        keycode: Keycode,
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+/// Clap value parser, so a bad keycode fails at argument parsing with the list
+/// of accepted forms rather than deep inside a plan.
+fn parse_keycode(text: &str) -> Result<Keycode, String> {
+    Keycode::parse(text).map_err(|error| {
+        format!("{error}. Accepted: a name such as KC_F18, a bare letter such as a, 0x006d, or 109")
+    })
 }
 
 #[derive(Subcommand)]
@@ -520,6 +558,37 @@ fn main() -> Result<()> {
                     scene.rgb != SceneRgb::default(),
                     "nothing to set; pass at least one of --brightness, --hue, --saturation, --speed or --effect"
                 );
+                apply_scene(&scene, dry_run, json)?;
+            }
+            SetCommand::Keycode { layer, row, column, keycode, dry_run, json } => {
+                let scene = Scene {
+                    schema: keysmith_core::SCENE_SCHEMA.to_owned(),
+                    name: "set-keycode".to_owned(),
+                    description: Some(format!("bind layer {layer} r{row}c{column} to {keycode}")),
+                    rgb: SceneRgb::default(),
+                    debounce_ms: None,
+                    wireless: Default::default(),
+                    encoders: Vec::new(),
+                    keys: vec![SceneKey { layer, row, column, keycode }],
+                };
+                apply_scene(&scene, dry_run, json)?;
+            }
+            SetCommand::Encoder { layer, direction, keycode, dry_run, json } => {
+                let clockwise = direction == "cw";
+                let scene = Scene {
+                    schema: keysmith_core::SCENE_SCHEMA.to_owned(),
+                    name: "set-encoder".to_owned(),
+                    description: Some(format!("bind layer {layer} {direction} to {keycode}")),
+                    rgb: SceneRgb::default(),
+                    debounce_ms: None,
+                    wireless: Default::default(),
+                    encoders: vec![SceneEncoder {
+                        layer,
+                        clockwise: clockwise.then_some(keycode),
+                        counter_clockwise: (!clockwise).then_some(keycode),
+                    }],
+                    keys: Vec::new(),
+                };
                 apply_scene(&scene, dry_run, json)?;
             }
         },

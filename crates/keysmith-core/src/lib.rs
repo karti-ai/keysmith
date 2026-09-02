@@ -1,6 +1,9 @@
 mod attended;
 mod device;
 mod planning;
+mod keycodes;
+#[rustfmt::skip]
+mod keycodes_generated;
 mod protocol;
 mod scene;
 mod write;
@@ -55,3 +58,4 @@ pub mod scenes {
     //! Reading and writing scenes on disk.
     pub use crate::scene::{list, load, read_scene, save, validate_name};
 }
+pub use keycodes::{Keycode, KeycodeError};

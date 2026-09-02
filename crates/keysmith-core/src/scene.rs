@@ -19,6 +19,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::keycodes::Keycode;
 use crate::planning::{ConfigurationSnapshot, MutationPlan, PlanError};
 
 pub const SCENE_SCHEMA: &str = "keysmith.scene/v1";
@@ -89,9 +90,9 @@ impl SceneWireless {
 pub struct SceneEncoder {
     pub layer: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub clockwise: Option<u16>,
+    pub clockwise: Option<Keycode>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub counter_clockwise: Option<u16>,
+    pub counter_clockwise: Option<Keycode>,
 }
 
 /// One key rebound by a scene.
@@ -100,7 +101,7 @@ pub struct SceneKey {
     pub layer: u8,
     pub row: u8,
     pub column: u8,
-    pub keycode: u16,
+    pub keycode: Keycode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -177,10 +178,10 @@ impl Scene {
                 .find(|binding| binding.layer == wanted.layer)
             {
                 if let Some(keycode) = wanted.clockwise {
-                    binding.clockwise = keycode;
+                    binding.clockwise = keycode.0;
                 }
                 if let Some(keycode) = wanted.counter_clockwise {
-                    binding.counter_clockwise = keycode;
+                    binding.counter_clockwise = keycode.0;
                 }
             }
         }
@@ -201,7 +202,7 @@ impl Scene {
                 .get_mut(usize::from(wanted.row))
                 .and_then(|row| row.get_mut(usize::from(wanted.column)))
             {
-                *slot = wanted.keycode;
+                *slot = wanted.keycode.0;
             }
         }
 
@@ -242,8 +243,8 @@ impl Scene {
                 .iter()
                 .map(|binding| SceneEncoder {
                     layer: binding.layer,
-                    clockwise: Some(binding.clockwise),
-                    counter_clockwise: Some(binding.counter_clockwise),
+                    clockwise: Some(Keycode(binding.clockwise)),
+                    counter_clockwise: Some(Keycode(binding.counter_clockwise)),
                 })
                 .collect(),
             keys: Vec::new(),
