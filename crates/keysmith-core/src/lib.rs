@@ -1,6 +1,7 @@
 mod attended;
 mod device;
 mod planning;
+mod indicators;
 mod keycodes;
 #[rustfmt::skip]
 mod keycodes_generated;
@@ -59,3 +60,8 @@ pub mod scenes {
     pub use crate::scene::{list, load, read_scene, save, validate_name};
 }
 pub use keycodes::{Keycode, KeycodeError};
+pub use indicators::{ENTRIES_PER_PACKET, Indicator};
+pub mod status_leds {
+    //! Painting host-driven status colours onto the keyboard.
+    pub use crate::indicators::{clear, set};
+}

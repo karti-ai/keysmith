@@ -1,3 +1,5 @@
+mod status;
+
 use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
@@ -84,6 +86,16 @@ enum Command {
         #[command(subcommand)]
         command: SetCommand,
     },
+    /// Show whether services are up on the keyboard's F-row.
+    Status {
+        #[command(subcommand)]
+        command: StatusCommand,
+    },
+    /// Paint or clear status LEDs directly.
+    Indicators {
+        #[command(subcommand)]
+        command: IndicatorCommand,
+    },
     /// One-shot readiness report: what is connected and what is possible.
     ///
     /// Written for agents. Exits 0 when writes are possible, 1 when the board is
@@ -134,6 +146,30 @@ enum SceneCommand {
         #[arg(long)]
         json: bool,
     },
+}
+
+#[derive(Subcommand)]
+enum StatusCommand {
+    /// Probe every target once, paint the result, and exit.
+    Once,
+    /// Probe and repaint on an interval until stopped.
+    Watch,
+    /// Probe every target and report, without touching the keyboard.
+    Check,
+}
+
+#[derive(Subcommand)]
+enum IndicatorCommand {
+    /// Colour one LED. 0 is Esc, 1-12 are the F-row.
+    Set {
+        #[arg(long)]
+        led: u8,
+        /// Six hex digits, e.g. 00ff28.
+        #[arg(long)]
+        color: String,
+    },
+    /// Drop every override and let the effect show through.
+    Clear,
 }
 
 #[derive(Subcommand)]
@@ -475,6 +511,36 @@ fn main() -> Result<()> {
                 } else {
                     println!("Write gate    {state:?}");
                 }
+            }
+        },
+        Command::Status { command } => match command {
+            StatusCommand::Once => status::run_once(&status::load()?, false)?,
+            StatusCommand::Watch => status::watch(&status::load()?)?,
+            StatusCommand::Check => {
+                let config = status::load()?;
+                for target in &config.targets {
+                    let (health, detail) = status::probe(target, config.timeout_seconds, config.slow_ms);
+                    println!("  {:<28} {:?} — {detail}", target.name, health);
+                }
+            }
+        },
+        Command::Indicators { command } => match command {
+            IndicatorCommand::Set { led, color } => {
+                let rgb = u32::from_str_radix(color.trim_start_matches('#'), 16)
+                    .map_err(|_| anyhow::anyhow!("--color takes six hex digits, e.g. 00ff28"))?;
+                anyhow::ensure!(rgb <= 0xffffff, "--color takes six hex digits, e.g. 00ff28");
+                let (mut transport, _) = open_keyboard()?;
+                keysmith_core::status_leds::set(
+                    &mut transport,
+                    &[keysmith_core::Indicator::new(
+                        led,
+                        (((rgb >> 16) & 0xff) as u8, ((rgb >> 8) & 0xff) as u8, (rgb & 0xff) as u8),
+                    )],
+                )?;
+            }
+            IndicatorCommand::Clear => {
+                let (mut transport, _) = open_keyboard()?;
+                keysmith_core::status_leds::clear(&mut transport)?;
             }
         },
         Command::Doctor { json } => return doctor(json),
