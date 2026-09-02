@@ -9,6 +9,7 @@
 
 use std::cell::Cell;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicPtr, Ordering};
 use std::time::{Duration, Instant};
 
 use core_foundation::runloop::{CFRunLoop, kCFRunLoopCommonModes};
@@ -17,6 +18,37 @@ use core_graphics::event::{
 };
 
 use crate::config::{Binding, Config};
+
+/// The live tap's mach port, so the callback can revive a tap that macOS turned
+/// off. Raw rather than a `CGEventTap`, because the callback is built before the
+/// tap exists and cannot borrow it.
+static TAP_PORT: AtomicPtr<std::ffi::c_void> = AtomicPtr::new(std::ptr::null_mut());
+
+unsafe extern "C" {
+    /// Re-arm a tap. Declared here because the safe wrapper needs a `CGEventTap`
+    /// value, which the callback has no way to hold.
+    fn CGEventTapEnable(tap: *mut std::ffi::c_void, enable: bool);
+}
+
+/// macOS switches an event tap off if a callback is ever slow, if input
+/// timing looks wrong, or at its own discretion. It delivers one
+/// tapDisabled event and then stops delivering anything at all, while the
+/// process stays alive and looks perfectly healthy.
+///
+/// Measured on 2026-09-01: this daemon delivered fourteen key presses, had its
+/// tap disabled, and then silently ignored the key for the rest of the day. The
+/// binding was still loaded, the process was still running, and the log still
+/// showed its start-up line. Nothing about it looked broken.
+///
+/// A tap that is not re-armed is a tap that works until it does not, so this is
+/// not optional.
+fn revive_tap() {
+    let port = TAP_PORT.load(Ordering::SeqCst);
+    if !port.is_null() {
+        eprintln!("event tap was disabled by macOS; re-enabling");
+        unsafe { CGEventTapEnable(port, true) };
+    }
+}
 
 /// Print the keycode of every key pressed, so a binding can be written against
 /// a real value instead of a guess.
@@ -74,7 +106,14 @@ pub fn run(config: Config, log_all: bool) -> anyhow::Result<()> {
         CGEventTapLocation::HID,
         CGEventTapPlacement::HeadInsertEventTap,
         CGEventTapOptions::Default,
-        vec![CGEventType::KeyDown, CGEventType::KeyUp],
+        // The tapDisabled events arrive regardless of this mask, but naming them
+        // keeps the intent visible next to the handler.
+        vec![
+            CGEventType::KeyDown,
+            CGEventType::KeyUp,
+            CGEventType::TapDisabledByTimeout,
+            CGEventType::TapDisabledByUserInput,
+        ],
         move |_, event_type, event| {
             let keycode = event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE);
 
@@ -87,6 +126,10 @@ pub fn run(config: Config, log_all: bool) -> anyhow::Result<()> {
             };
 
             match event_type {
+                CGEventType::TapDisabledByTimeout | CGEventType::TapDisabledByUserInput => {
+                    revive_tap();
+                    return None;
+                }
                 CGEventType::KeyDown => {
                     if !matches!(pressed_at.get(), Some((code, _)) if code == keycode) {
                         pressed_at.set(Some((keycode, Instant::now())));
@@ -156,6 +199,11 @@ fn dispatch(binding: &Binding, held: Duration) {
 }
 
 fn attach(tap: &CGEventTap) {
+    use core_foundation::base::TCFType;
+    TAP_PORT.store(
+        tap.mach_port.as_concrete_TypeRef() as *mut std::ffi::c_void,
+        Ordering::SeqCst,
+    );
     let loop_source = tap
         .mach_port
         .create_runloop_source(0)
